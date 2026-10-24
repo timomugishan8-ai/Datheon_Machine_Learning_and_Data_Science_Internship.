@@ -120,6 +120,27 @@ Multi-Class Benchmark Classification Pipeline/
 └── .gitignore
 ```
 
+## Baseline model results
+
+The baseline classification model was evaluated on the held-out test set using the standard multiclass classification metrics.
+
+Classification report:
+
+- Setosa: precision = 1.00, recall = 1.00, f1-score = 1.00
+- Versicolor: precision = 0.90, recall = 0.90, f1-score = 0.90
+- Virginica: precision = 0.90, recall = 0.90, f1-score = 0.90
+- Accuracy: 0.93
+- Macro average: 0.93
+- Weighted average: 0.93
+
+The confusion matrix showed that:
+
+- all 10 setosa samples were correctly classified,
+- 9 of 10 versicolor samples were correctly classified, with 1 sample misclassified as virginica,
+- 9 of 10 virginica samples were correctly classified, with 1 sample misclassified as versicolor.
+
+This means the baseline model achieved a strong overall performance of 93% accuracy. It perfectly separated setosa from the other two species, while the only confusion occurred between versicolor and virginica, which is expected because these classes are visually and morphologically similar.
+
 ## Setup
 
 To reproduce the analysis:
