@@ -1,6 +1,6 @@
 # Multi-Class Benchmark Classification Pipeline
 
-This project is a beginner-friendly classification workflow built around the classic Iris flower dataset. The work documented in the first two notebooks focuses on understanding the dataset, cleaning it, and performing exploratory data analysis to confirm which features are most informative for classifying the three species.
+This project is a beginner-friendly classification workflow built around the classic Iris flower dataset. The notebooks cover understanding and cleaning the dataset, exploratory data analysis, and training and evaluating classification models.
 
 ## Project goal
 
@@ -120,9 +120,34 @@ Multi-Class Benchmark Classification Pipeline/
 └── .gitignore
 ```
 
-## Baseline model results
+## Notebook 3: Model training and evaluation
 
-The baseline classification model was evaluated on the held-out test set using the standard multiclass classification metrics.
+The third notebook trains and evaluates Logistic Regression and Decision Tree classifiers using a held-out test set of 30 observations. Logistic Regression is trained with standardized features, while the Decision Tree uses the original feature scales.
+
+### Model comparison
+
+Both models achieved the same scores on this test split:
+
+| Model | Accuracy | Macro precision | Macro recall | Macro F1-score |
+|---|---:|---:|---:|---:|
+| Logistic Regression | 0.933 | 0.933 | 0.933 | 0.933 |
+| Decision Tree | 0.933 | 0.933 | 0.933 | 0.933 |
+
+Each model correctly classified 28 of the 30 test samples. The notebook uses side-by-side confusion matrices to compare class-specific predictions and errors.
+
+### Additional model visualizations
+
+- **Decision Tree feature importance:** Petal length (about 0.56) and petal width (about 0.40) account for most of the tree's feature importance; the sepal features contribute much less.
+- **Multiclass ROC curves:** Both models show excellent discrimination for setosa (AUC 1.00). Logistic Regression has higher AUC for versicolor and virginica (0.99 each) than the Decision Tree (0.92 each) on this test split.
+- **Two-feature decision boundaries:** Plots based on petal length and petal width show clear separation for setosa and more overlap between versicolor and virginica. Logistic Regression produces smoother boundaries, while the Decision Tree creates step-like regions. These plots use models fitted on only the two petal features, for visualization.
+
+### Interpretation
+
+The two classifiers tie on accuracy and the reported macro-averaged metrics, while the ROC curves suggest Logistic Regression ranks versicolor and virginica more effectively on this split. The visualizations also support the EDA finding that petal measurements are especially informative. Since these results come from a single, small test set, cross-validation or evaluation on additional data is recommended before drawing conclusions about which model generalizes best.
+
+## Logistic Regression baseline results
+
+The Logistic Regression baseline was evaluated on the held-out test set using the standard multiclass classification metrics.
 
 Classification report:
 
@@ -140,6 +165,19 @@ The confusion matrix showed that:
 - 9 of 10 virginica samples were correctly classified, with 1 sample misclassified as versicolor.
 
 This means the baseline model achieved a strong overall performance of 93% accuracy. It perfectly separated setosa from the other two species, while the only confusion occurred between versicolor and virginica, which is expected because these classes are visually and morphologically similar.
+
+## Decision Tree model results
+
+The Decision Tree was trained on the unscaled input features, since tree-based models do not require feature standardization. Its classification report on the same 30-sample test set was:
+
+- Setosa: precision = 1.00, recall = 1.00, f1-score = 1.00 (10 samples)
+- Versicolor: precision = 0.90, recall = 0.90, f1-score = 0.90 (10 samples)
+- Virginica: precision = 0.90, recall = 0.90, f1-score = 0.90 (10 samples)
+- Accuracy: 0.93 (28 of 30 samples)
+- Macro average: precision = 0.93, recall = 0.93, f1-score = 0.93
+- Weighted average: precision = 0.93, recall = 0.93, f1-score = 0.93
+
+The Decision Tree also classified all 10 setosa samples correctly and 9 of 10 samples for each of versicolor and virginica. Its class-level report and overall scores match the Logistic Regression baseline on this split. The feature-importance plot shows that the tree relies mainly on petal length and petal width. Together, these results demonstrate comparable test-set classification performance, though the models differ in how they form decision boundaries and rank class probabilities.
 
 ## Setup
 
@@ -159,11 +197,12 @@ pip install -r requirements.txt
 
 ## Summary
 
-The first two notebooks establish a strong foundation for the classification task:
+The three notebooks establish a complete foundation and baseline modeling workflow for the classification task:
 
 - the dataset is clean and well-formed,
 - the target variable is balanced,
-- key feature relationships are understood,
-- and the petal measurements are identified as the most important discriminators.
+- key feature relationships and class distributions are explored,
+- petal measurements are identified as important discriminators,
+- and Logistic Regression and Decision Tree models are compared using classification metrics and visualizations.
 
-This makes the project a suitable benchmark for demonstrating a standard supervised machine learning workflow in a multiclass setting.
+Both models achieve 93.3% accuracy on the current test split. Further validation is needed to assess how reliably these results generalize.
