@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local environment and secrets
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
