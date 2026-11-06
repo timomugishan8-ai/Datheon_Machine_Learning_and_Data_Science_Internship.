@@ -2,119 +2,141 @@
 
 ## Project overview
 
-This project explores the California Housing dataset and develops regression models to predict **median house value**. The notebooks cover data inspection, missing-value treatment, exploratory analysis, feature engineering, multicollinearity assessment, leakage-conscious preprocessing, model fitting, and held-out evaluation.
+This project analyzes California housing data and develops regression models to estimate `median_house_value` for a census block group. The workflow progresses from data inspection and feature preparation through multicollinearity analysis, model development, held-out evaluation, and error interpretation. The current modeling notebook compares full and reduced predictor sets using OLS, Ridge, and Lasso regression.
 
-Models are compared using:
+## Problem statement
 
-- Root Mean Squared Error (RMSE)
-- Mean Absolute Error (MAE)
-- R²
+Can census block-group characteristics such as income, housing stock, population, location, and ocean proximity be used to estimate the area's median house value? This is a supervised regression task: the target is continuous, and each prediction represents an area-level median, not the price of an individual property.
 
-## Dataset and unit of observation
+## Dataset description and source
 
-The dataset contains **20,640 rows and 10 columns**. Each row represents a **California census block group**, not an individual home or household. Its features describe or summarize housing, population, income, and location in that area.
+The local dataset, [`data/raw/housing.csv`](data/raw/housing.csv), contains **20,640 rows and 10 columns**. Each row describes a California census block group. The target is `median_house_value`; predictors describe location, housing, population, income, and ocean proximity.
 
-This distinction explains the median-valued columns:
-
-- `median_income` is the median household income in a block group.
-- `median_house_value` is the median home value in a block group and is the project's prediction target.
-
-These are area-level statistics; they are not the income or price of a specific household or home, and they are not one median calculated across the full dataset.
-
-| Feature | Description |
+| Column(s) | Description |
 |---|---|
 | `longitude`, `latitude` | Geographic coordinates of the block group |
 | `housing_median_age` | Median age of housing in the block group |
-| `total_rooms`, `total_bedrooms` | Room and bedroom counts for the block group |
-| `population`, `households` | Population and household counts for the block group |
-| `median_income` | Median household income for the block group |
-| `median_house_value` | Median home value for the block group; prediction target |
+| `total_rooms`, `total_bedrooms` | Counts of rooms and bedrooms in the area |
+| `population`, `households` | Population and household counts in the area |
+| `median_income` | Median household income in the block group |
 | `ocean_proximity` | Categorical description of the block group's proximity to the ocean |
+| `median_house_value` | Median home value in the block group; prediction target |
 
-## Repository contents
+`median_income` and `median_house_value` are area-level medians, not values for a particular household or home. The dataset's target ranges from **$14,999 to $500,001**; the upper end is capped, which limits distinctions among the most expensive areas.
 
-- `data/raw/housing.csv` — source data used in the analysis.
-- `data/processed/house_cleaned.csv` — prepared dataset used for feature and multicollinearity analysis.
-- `data/cleaned/` — directory reserved for cleaned data outputs.
-- `notebooks/01_data_understanding.ipynb` — data inspection, cleaning, exploratory analysis, and interpretation.
-- `notebooks/02_data_preparation.ipynb` — train/test split, multicollinearity diagnostics, and feature engineering.
-- `notebooks/03_regression_modeling.ipynb` — preprocessing, baseline and regression model training, tuning, held-out evaluation, and error analysis.
-- `reports/figures/` — directory for project figures.
+The data is the commonly used California Housing Prices dataset format, based on the 1990 U.S. Census. The canonical California housing data was distributed through [StatLib](https://lib.stat.cmu.edu/datasets/houses.zip) and is described in the [scikit-learn California Housing documentation](https://scikit-learn.org/stable/datasets/real_world.html#california-housing-dataset). This repository contains a 10-column CSV variant, including `ocean_proximity`; its exact download or repackaging provenance is not recorded in the project files.
 
-## Data understanding and preparation findings
+## Objectives
 
-The initial inspection confirmed 20,640 observations and 10 features. `total_bedrooms` was the only column with missing data: **207 values, approximately 1% of the rows**. The notebook retained the feature and filled those missing entries with the column median. The median is appropriate here because bedroom counts are skewed and the median is less affected by unusually large observations than the mean. A follow-up check confirmed that no `total_bedrooms` values remained missing.
+- Inspect the data, identify missing values and duplicates, and summarize feature and target distributions.
+- Explore numeric relationships with the target and diagnose predictor multicollinearity.
+- Engineer household-level ratios and an income-by-rooms interaction.
+- Compare full and reduced feature configurations to understand the trade-off between collinearity and predictive performance.
+- Train a mean-prediction baseline and OLS, Ridge, and Lasso regressors.
+- Evaluate test-set performance and inspect prediction and residual patterns.
 
-No duplicate rows were found. The target, `median_house_value`, ranges from **$14,999 to $500,001**. Its mean is approximately **$206,856**, above its median of **$179,700**, indicating that high-value observations raise the average above the midpoint.
+## Technologies and libraries
 
-## Exploratory analysis and interpretation
+- Python and Jupyter Notebook for analysis and documentation.
+- NumPy and pandas for numerical computing and tabular data manipulation.
+- Matplotlib and Seaborn for plots.
+- scikit-learn for preprocessing, pipelines, train/test splitting, cross-validation, regression models, and metrics.
+- statsmodels for variance inflation factor (VIF) calculations.
 
-The numeric correlation analysis found that `median_income` has the strongest positive linear correlation with `median_house_value` (**r = 0.688**). The remaining numeric features have much weaker individual correlations with the target:
+The notebooks use `OneHotEncoder(sparse_output=False)`, which requires scikit-learn 1.2 or newer. The repository does not currently include a dependency lockfile or `requirements.txt`.
 
-| Numeric feature | Correlation with `median_house_value` |
-|---|---:|
-| `median_income` | 0.688 |
-| `total_rooms` | 0.134 |
-| `housing_median_age` | 0.106 |
-| `households` | 0.066 |
-| `total_bedrooms` | 0.049 |
-| `population` | -0.025 |
-| `longitude` | -0.046 |
-| `latitude` | -0.144 |
+## Project structure
 
-These values describe linear association, not causation. They do not measure non-linear relationships or interactions, and the numeric correlation analysis does not include the categorical `ocean_proximity` feature. The weak individual correlations therefore do not, on their own, establish that a feature should be excluded from a model.
+```text
+.
+├── data/
+│   ├── raw/housing.csv
+│   ├── processed/house_cleaned.csv
+│   └── cleaned/
+├── notebooks/
+│   ├── 01_data_understanding.ipynb
+│   ├── 02_data_preparation.ipynb
+│   └── 03_regression_modeling.ipynb
+├── reports/figures/
+└── README.md
+```
 
-The count features `total_rooms`, `total_bedrooms`, and `households` describe related aspects of each area. Their overlap should be assessed when developing regression models, particularly when handling multicollinearity.
+`01_data_understanding.ipynb` inspects and cleans the raw data, including writing `data/processed/house_cleaned.csv`. `02_data_preparation.ipynb` reads that processed file for train/test splitting, feature engineering, and multicollinearity analysis. `03_regression_modeling.ipynb` reads the raw CSV and builds its own train/test and model-preprocessing workflow. Figures are displayed in the notebooks; `reports/figures/` is available for saved report figures.
 
-## Data preparation and feature analysis
+## Data preprocessing and feature engineering
 
-Notebook 2 reads `data/processed/house_cleaned.csv`, separates `median_house_value` from the predictors, and creates an 80/20 train/test split with `random_state=42`. It performs its correlation and variance inflation factor (VIF) analysis on numeric training predictors. The test split is kept separate for later evaluation.
+Initial data inspection found **207 missing `total_bedrooms` values** (about 1% of rows) and no duplicate rows. The data-understanding notebook fills missing bedroom counts with the median and saves the processed dataset. In the regression notebook, preprocessing is kept in scikit-learn pipelines: numeric values are median-imputed and standardized; categorical values are imputed with the most frequent category and one-hot encoded with unseen categories ignored. This lets imputation, scaling, and encoding parameters be learned from training data during fitting and cross-validation.
 
-The initial diagnostics indicate substantial redundancy among area-size and location variables. The strongest reported pairwise relationships include total bedrooms with households (|r| about 0.98), total rooms with total bedrooms (about 0.93), longitude with latitude (about 0.92), total rooms with households (about 0.92), and population with households (about 0.91). Initial VIF values are highest for total bedrooms (36.31), households (35.82), and total rooms (12.82); latitude (8.80), longitude (8.68), and population (6.35) are also elevated. These findings suggest that individual linear-model coefficients for some predictors may be unstable or difficult to interpret.
+The notebooks create four predictors:
 
-Notebook 2 adds four row-level predictors to both train and test splits:
+- `rooms_per_household` = `total_rooms / households`
+- `bedrooms_per_room` = `total_bedrooms / total_rooms`
+- `population_per_household` = `population / households`
+- `income_x_rooms_per_household` = `median_income * rooms_per_household`
 
-- `rooms_per_household` — total rooms divided by households.
-- `bedrooms_per_room` — total bedrooms divided by total rooms.
-- `population_per_household` — population divided by households.
-- `income_x_rooms_per_household` — median income multiplied by rooms per household.
+Notebook 3 uses an 80/20 split with `random_state=42`. It compares a **full** feature set containing the predictors and engineered features with a **reduced** set that removes `total_rooms`, `total_bedrooms`, and `households` while retaining the other predictors. The reduced set is an experiment to assess the effect of removing correlated raw counts, not a claim that those variables are universally unnecessary.
 
-After adding these features, the original count-feature collinearity remains because the original predictors are retained. The notebook reports VIF values of 49.94 for total bedrooms, 47.03 for households, and 18.82 for total rooms. The income-by-rooms interaction has a VIF of 17.80, and median income's VIF increases from 1.74 to 13.69. Among the engineered features, rooms per household (4.50), bedrooms per room (2.89), and population per household (1.07) have lower VIFs. These are diagnostic results, not evidence that the features improve predictive accuracy; candidate feature sets should be judged by validation performance.
+Notebook 2's correlation and VIF analysis found substantial overlap among area-size counts: for example, `total_bedrooms` and `households` had |r| about 0.98. In the initial feature-engineered set, VIFs were 49.94 for `total_bedrooms`, 47.03 for `households`, and 18.82 for `total_rooms`. After these raw counts were removed for the reduced-set analysis, VIF decreased for most remaining predictors, but remained elevated for `income_x_rooms_per_household` (17.23) and `median_income` (13.15). VIF is a diagnostic of predictor redundancy and coefficient stability; it does not measure predictive accuracy.
 
-## Regression modeling workflow
+## Models developed
 
-Notebook 3 reads the raw `data/raw/housing.csv`, recreates the same four engineered features, and makes a separate 80/20 split with `random_state=42`. It identifies numeric and categorical predictors, then defines a scikit-learn `ColumnTransformer` containing:
+The notebook fits and evaluates:
 
-- A numeric pipeline that imputes missing values with training-set medians and standardizes the features.
-- A categorical pipeline that fills missing values with the most frequent category and one-hot encodes categories, ignoring categories not seen during fitting.
+- **Mean baseline:** `DummyRegressor(strategy="mean")`, used as a simple reference prediction.
+- **OLS:** ordinary least-squares linear regression.
+- **Ridge:** L2-regularized linear regression.
+- **Lasso:** L1-regularized linear regression, which can shrink coefficients to zero.
 
-Keeping imputation, scaling, and encoding inside pipelines allows transformations to be learned from training data. Ridge and Lasso are tuned with five-fold `GridSearchCV`, optimizing RMSE over 13 `alpha` values from 0.001 to 1,000. The selected values were 1.0 for Ridge and approximately 3.16 for Lasso. Their cross-validation RMSE values were approximately $67,759 and $67,760, respectively. A mean-prediction `DummyRegressor` provides a baseline, and an OLS linear regression is also fitted.
+OLS, Ridge, and Lasso are trained on both the full and reduced feature sets, producing six configurations. Ridge and Lasso are tuned separately for each configuration using five-fold `GridSearchCV` on the training data. The search evaluates 13 `alpha` values from 0.001 to 1,000 using RMSE. The preprocessing is included in each pipeline so transformations are refit within each cross-validation fold.
 
-## Held-out evaluation results
+## Evaluation metrics and results
 
-The notebook generates predictions for all four models and compares them on the 20% test split using RMSE, MAE, and R²:
+The notebook evaluates predictions on the same held-out 20% test observations:
 
-| Model | RMSE | MAE | R² |
-|---|---:|---:|---:|
-| OLS | $68,917 | $49,710 | 0.6375 |
-| Lasso | $68,922 | $49,712 | 0.6375 |
-| Ridge | $68,926 | $49,716 | 0.6375 |
-| Mean baseline | $114,486 | $90,607 | -0.0002 |
+- **RMSE:** errors in dollars, with larger errors penalized more; lower is better.
+- **MAE:** mean absolute error in dollars; lower is better.
+- **R²:** variance explained relative to predicting the test-set mean; closer to 1 is better, while a negative value is worse than that baseline.
 
-OLS has the lowest RMSE on this split, but its margin over Ridge and Lasso is negligible. All three regression models perform substantially better than the mean baseline. Their R² of about 0.64 indicates that they explain around 64% of the test-set variation relative to predicting the test-set mean; it does not mean that 64% of individual predictions are correct. The MAE indicates an average absolute error of roughly $49,700, while RMSE is higher because it penalizes large misses more strongly.
+| Feature set | Model | RMSE | MAE | R² |
+|---|---|---:|---:|---:|
+| Full | OLS | $68,917 | $49,710 | 0.6375 |
+| Full | Lasso | $68,922 | $49,712 | 0.6375 |
+| Full | Ridge | $68,926 | $49,716 | 0.6375 |
+| Reduced | OLS | $71,649 | $51,567 | 0.6082 |
+| Reduced | Lasso | $71,650 | $51,569 | 0.6082 |
+| Reduced | Ridge | $71,656 | $51,574 | 0.6082 |
 
-The notebook includes RMSE and R² comparison plots, an actual-versus-predicted scatter plot, and a residual histogram. The scatter plot shows that predictions generally rise with actual values, but points are spread away from the perfect-prediction line. Predictions tend toward the middle of the target range, with some substantial over- and underestimates. The vertical concentration near the dataset's approximately $500,000 upper target cap limits interpretation for the most expensive areas. The residual distribution is concentrated near zero but has long tails and a longer positive tail; because residuals are actual minus predicted, positive residuals represent underprediction. A residual histogram alone cannot diagnose changing error variance or all forms of systematic error.
+The full-feature OLS model has the lowest test RMSE (**$68,917**) and is selected as the best configuration in the notebook. The full-feature Ridge and Lasso models are effectively tied with it; their score differences are only a few dollars. Removing the three raw counts makes the scores worse on this split: reduced-set RMSE is about $2,700 higher and R² falls from 0.6375 to 0.6082. In an earlier comparison, the mean baseline scored RMSE **$114,486**, MAE **$90,607**, and R² **-0.0002**, substantially worse than the trained regression models. The reported MAE for the full models is about **$49,700**, so individual estimates can still have sizeable errors.
 
-The reported Lasso fit reduced 1 of 17 transformed coefficients to zero, indicating limited feature sparsity in this configuration. Coefficients should be interpreted cautiously: the multicollinearity found in Notebook 2 can make coefficient estimates unstable, and they describe model associations rather than causal effects.
+## Key findings
 
-### Interpretation and recommendations
+- `median_income` had the strongest positive numeric correlation with `median_house_value` in the exploratory analysis (r = 0.688); this is association, not causation.
+- Raw housing-count predictors are highly collinear. Removing selected counts lowered much of the remaining VIF, but did not improve test performance in this comparison.
+- The full feature set performed better than the reduced set. OLS was numerically first, but Ridge and Lasso were practically indistinguishable by these test metrics.
+- The actual-versus-predicted plot shows the overall upward relationship but also substantial scatter around perfect predictions, with predictions tending toward the center of the target range. The target cap near $500,000 limits interpretation at the high end.
+- The residual histogram is concentrated near zero but has long tails and a longer positive tail. Since residuals are actual minus predicted, positive residuals correspond to underpredictions. A histogram does not establish whether error variance changes with fitted values.
+- The Lasso coefficient inspection found 1 of 17 transformed coefficients equal to zero in the reported fit, indicating limited sparsity for this setup. Correlated predictors also make individual coefficients less stable and they should not be interpreted causally.
 
-OLS is the numerical winner by test RMSE, but OLS, Ridge, and Lasso are effectively tied on this split. Prefer Ridge if coefficient stability under correlated predictors is important; these results do not show a meaningful predictive gain from Lasso or extensive feature removal. Keep the mean baseline as a reference and assess whether the roughly $49,700 MAE is acceptable for the intended use.
+OLS is the lowest-RMSE model in the current comparison, but the small gap does not establish a meaningful advantage. The notebook selects the best model using test RMSE, so the test set has influenced model selection; treat the reported scores as comparative rather than as a fully independent final estimate. For a stronger final assessment, choose the model and feature configuration with cross-validation or a validation set on training data, then evaluate once on an untouched test set. Further work could examine residuals against fitted values, investigate errors in high-value areas, and test nonlinear models using the same validation protocol.
 
-The current notebook selects OLS by sorting the held-out test results by RMSE. Since the test set is then used both to choose and report the model, the scores should be treated as a comparative estimate rather than a fully independent final assessment. For a stronger final evaluation, select the model using a consistent cross-validation or validation procedure on training data, then evaluate the chosen model once on an untouched test set. Further work could examine residuals against fitted values and important features, investigate errors among high-value areas affected by the target cap, and compare nonlinear models using the same validation procedure.
+## How to run the notebook
 
-## Notebooks
+From the project root, create or activate a Python environment, then install the notebook dependencies:
 
-- [`notebooks/01_data_understanding.ipynb`](notebooks/01_data_understanding.ipynb) — dataset inspection, missing-value treatment, descriptive statistics, distributions, and exploratory relationships.
-- [`notebooks/02_data_preparation.ipynb`](notebooks/02_data_preparation.ipynb) — train/test split, correlation and VIF diagnostics, engineered features, and updated multicollinearity analysis.
-- [`notebooks/03_regression_modeling.ipynb`](notebooks/03_regression_modeling.ipynb) — train/test split, preprocessing pipelines, baseline/OLS/Ridge/Lasso models, Ridge and Lasso cross-validation, test metrics, model-comparison plots, Lasso coefficient inspection, and prediction-error analysis.
+```bash
+python -m pip install "scikit-learn>=1.2" numpy pandas matplotlib seaborn statsmodels jupyter
+```
+
+Start Jupyter from the project root:
+
+```bash
+jupyter notebook
+```
+
+Open the notebooks under `notebooks/` and run cells from top to bottom. Run them in this order:
+
+1. `01_data_understanding.ipynb` reads `data/raw/housing.csv` and creates `data/processed/house_cleaned.csv`.
+2. `02_data_preparation.ipynb` reads the processed CSV and performs its split, feature engineering, and VIF analysis.
+3. `03_regression_modeling.ipynb` reads the raw CSV, trains the full and reduced model configurations, tunes Ridge and Lasso, and evaluates the models.
+
+The notebooks use paths relative to their location, so keep the repository's `data/` and `notebooks/` directories in their current relationship. The raw CSV and processed CSV should be present before running the notebooks that consume them.
