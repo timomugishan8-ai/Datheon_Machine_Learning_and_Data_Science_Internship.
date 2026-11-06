@@ -2,9 +2,9 @@
 
 ## Project overview
 
-This project explores the California Housing dataset and develops regression models to predict **median house value**. The work includes data inspection, missing-value treatment, exploratory analysis, feature engineering, multicollinearity assessment, and comparison of Ordinary Least Squares (OLS), Ridge, and Lasso regression.
+This project explores the California Housing dataset and prepares a regression workflow to predict **median house value**. The notebooks cover data inspection, missing-value treatment, exploratory analysis, feature engineering, multicollinearity assessment, and construction of a leakage-conscious preprocessing pipeline. Model fitting and held-out performance comparison are the next steps; the current regression notebook does not yet report trained-model results.
 
-The project evaluates models using:
+The planned model evaluation uses:
 
 - Root Mean Squared Error (RMSE)
 - Mean Absolute Error (MAE)
@@ -34,8 +34,11 @@ These are area-level statistics; they are not the income or price of a specific 
 ## Repository contents
 
 - `data/raw/housing.csv` — source data used in the analysis.
+- `data/processed/house_cleaned.csv` — prepared dataset used for feature and multicollinearity analysis.
 - `data/cleaned/` — directory reserved for cleaned data outputs.
 - `notebooks/01_data_understanding.ipynb` — data inspection, cleaning, exploratory analysis, and interpretation.
+- `notebooks/02_data_preparation.ipynb` — train/test split, multicollinearity diagnostics, and feature engineering.
+- `notebooks/03_regression_modeling.ipynb` — data split and preprocessing pipeline setup for regression.
 - `reports/figures/` — directory for project figures.
 
 ## Data understanding and preparation findings
@@ -63,12 +66,32 @@ These values describe linear association, not causation. They do not measure non
 
 The count features `total_rooms`, `total_bedrooms`, and `households` describe related aspects of each area. Their overlap should be assessed when developing regression models, particularly when handling multicollinearity.
 
-## Modeling approach
+## Data preparation and feature analysis
 
-The project will use `median_house_value` as the target and compare OLS, Ridge, and Lasso regression. Feature engineering will include interaction features, and model evaluation will use RMSE, MAE, and R².
+Notebook 2 reads `data/processed/house_cleaned.csv`, separates `median_house_value` from the predictors, and creates an 80/20 train/test split with `random_state=42`. It performs its correlation and variance inflation factor (VIF) analysis on numeric training predictors. The test split is kept separate for later evaluation.
 
-For an unbiased model evaluation, fit preprocessing steps—including missing-value imputation—on the training data only, then apply the fitted transformations to validation or test data. Report final predictive performance using held-out data; exploratory analysis and correlation values are not model performance scores.
+The initial diagnostics indicate substantial redundancy among area-size and location variables. The strongest reported pairwise relationships include total bedrooms with households (|r| about 0.98), total rooms with total bedrooms (about 0.93), longitude with latitude (about 0.92), total rooms with households (about 0.92), and population with households (about 0.91). Initial VIF values are highest for total bedrooms (36.31), households (35.82), and total rooms (12.82); latitude (8.80), longitude (8.68), and population (6.35) are also elevated. These findings suggest that individual linear-model coefficients for some predictors may be unstable or difficult to interpret.
 
-## Notebook
+Notebook 2 adds four row-level predictors to both train and test splits:
 
-Open [`notebooks/01_data_understanding.ipynb`](notebooks/01_data_understanding.ipynb) to review the dataset inspection, missing-value treatment, descriptive statistics, distribution plots, correlation analysis, and overall interpretation.
+- `rooms_per_household` — total rooms divided by households.
+- `bedrooms_per_room` — total bedrooms divided by total rooms.
+- `population_per_household` — population divided by households.
+- `income_x_rooms_per_household` — median income multiplied by rooms per household.
+
+After adding these features, the original count-feature collinearity remains because the original predictors are retained. The notebook reports VIF values of 49.94 for total bedrooms, 47.03 for households, and 18.82 for total rooms. The income-by-rooms interaction has a VIF of 17.80, and median income's VIF increases from 1.74 to 13.69. Among the engineered features, rooms per household (4.50), bedrooms per room (2.89), and population per household (1.07) have lower VIFs. These are diagnostic results, not evidence that the features improve predictive accuracy; candidate feature sets should be judged by validation performance.
+
+## Regression preprocessing workflow
+
+Notebook 3 reads the raw `data/raw/housing.csv`, recreates the same four engineered features, and makes a separate 80/20 split with `random_state=42`. It identifies numeric and categorical predictors, then defines a scikit-learn `ColumnTransformer` containing:
+
+- A numeric pipeline that imputes missing values with training-set medians and standardizes the features.
+- A categorical pipeline that fills missing values with the most frequent category and one-hot encodes categories, ignoring categories not seen during fitting.
+
+Keeping imputation, scaling, and encoding inside pipelines allows each transformation to be learned from training data when the pipeline is fitted, preventing test-set statistics from influencing preprocessing. Notebook 3 currently stops after constructing the preprocessor: it does not yet fit a regression estimator, run cross-validation or hyperparameter search, or calculate test-set RMSE, MAE, or R². Therefore, this README does not present predictive performance results. The next modeling step is to attach estimators (for example, a mean baseline and linear, Ridge, and Lasso models), fit and tune them using training data, and report final metrics on the held-out test set.
+
+## Notebooks
+
+- [`notebooks/01_data_understanding.ipynb`](notebooks/01_data_understanding.ipynb) — dataset inspection, missing-value treatment, descriptive statistics, distributions, and exploratory relationships.
+- [`notebooks/02_data_preparation.ipynb`](notebooks/02_data_preparation.ipynb) — train/test split, correlation and VIF diagnostics, engineered features, and updated multicollinearity analysis.
+- [`notebooks/03_regression_modeling.ipynb`](notebooks/03_regression_modeling.ipynb) — raw-data split and leakage-conscious numeric and categorical preprocessing pipelines; model training and evaluation remain to be completed.
